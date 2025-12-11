@@ -15,7 +15,7 @@ pub fn build_cpu() -> Cpu {
 }
 
 impl Cpu {
-    pub fn cycle(&self) {
+    pub fn cycle(&mut self) {
         println!("PC: 0x{:x}", self.pc);
         let opcode = self.fetch_instruction();
         println!("Opcode: 0x{:x}", opcode);
@@ -28,8 +28,29 @@ impl Cpu {
         (left << 8) | right
     }
 
-    pub fn execute_instruction(&self, opcode: u16) {
-        utility::upper_nibble(0xff);
+    pub fn execute_instruction(&mut self, opcode: u16) {
+        let op = ((opcode & 0xF000) >> 12) as u8;
+        let x = ((opcode & 0x0F00) >> 8) as u8;
+        let y = ((opcode & 0x00F0) >> 4) as u8;
+        let nn = (opcode & 0x00FF) as u8;
+        let n = (opcode & 0x000F) as u8;
+
+        match op {
+            0x6 => self.ld_vx_nn(x as usize, nn),
+            0x7 => self.add_vx_nn(x as usize, nn),
+            0x8 => match n {
+                0x0 => self.ld_vx_vy(x as usize, y as usize),
+                0x4 => self.add_vx_vy(x as usize, y as usize),
+                _ => println!("Unimplemented opcode: 0x{:x}", opcode),
+            },
+            _ => println!("Unimplemented opcode: 0x{:x}", opcode),
+        }
+    }
+
+    pub fn set_register(&mut self, register: usize, value: u8) {
+        if register <= 0xF {
+            self.v_registers[register] = value
+        }
     }
 
     pub fn get_register(&self, register: usize) -> u8 {
@@ -37,12 +58,6 @@ impl Cpu {
             self.v_registers[register]
         } else {
             0
-        }
-    }
-
-    pub fn set_register(&mut self, register: usize, value: u8) {
-        if register <= 0xF {
-            self.v_registers[register] = value
         }
     }
 
@@ -68,5 +83,39 @@ impl Cpu {
         } else {
             0
         }
+    }
+
+    fn ld_vx_nn(&mut self, register: usize, value: u8) {
+        if register <= 0xF {
+            self.v_registers[register] = value
+        }
+        self.pc += 2
+    }
+
+    fn add_vx_nn(&mut self, register: usize, value: u8) {
+        if register <= 0xF {
+            self.v_registers[register] = self.v_registers[register].wrapping_add(value);
+        }
+        self.pc += 2
+    }
+
+    fn ld_vx_vy(&mut self, x: usize, y: usize) {
+        if x <= 0xF && y <= 0xF {
+            let new = self.v_registers[y];
+            self.v_registers[x] = new;
+        }
+        self.pc += 2
+    }
+
+    fn add_vx_vy(&mut self, x: usize, y: usize) {
+        if x <= 0xF && y <= 0xF {
+            let x_val = self.v_registers[x];
+            let y_val = self.v_registers[y];
+            if x_val as u16 + y_val as u16 > 255 {
+                self.v_registers[0xF] = 1
+            }
+            self.v_registers[x] = x_val.wrapping_add(y_val);
+        }
+        self.pc += 2
     }
 }
