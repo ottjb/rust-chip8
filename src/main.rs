@@ -1,20 +1,15 @@
 mod cpu;
+mod display;
 mod utility;
 
 fn main() {
-    let byte: u8 = 0xA5;
+    let mut cpu = cpu::build_cpu();
+    let rom_path = "../roms/corax.ch8";
+    cpu.load_rom(rom_path);
 
-    let mut CPU = cpu::build_cpu();
-
-    CPU.set_register(1, 200);
-    CPU.set_register(2, 100);
-    CPU.write_byte(0x200, 0x81);
-    CPU.write_byte(0x201, 0x24);
-
-    // Fetch-Decode-Execute
-    for _ in 0..1 {
-        CPU.cycle();
+    for _ in 0..400 {
+        cpu.cycle();
     }
 
-    println!("{} {}", CPU.get_register(1), CPU.get_register(0xF))
+    //println!("{:x}", cpu.read_byte(0x019))
 }
