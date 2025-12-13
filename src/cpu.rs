@@ -1,5 +1,7 @@
 use std::fs;
 
+use rand::Rng;
+
 use crate::display::{Display, build_display};
 
 pub struct Cpu {
@@ -89,7 +91,7 @@ impl Cpu {
             0x9 => self.jmp_vx_notvy(x as usize, y as usize),
             0xA => self.ld_i(nnn),
             0xB => self.jmp_v0(nnn),
-            //0xC => self.rand(x as usize, nn),
+            0xC => self.rand(x as usize, nn),
             0xD => self.draw_sprite(x as usize, y as usize, n),
             0xE => match n {
                 0xE => self.key_pressed(x as usize),
@@ -185,6 +187,27 @@ impl Cpu {
             0xF0, 0x80, 0xF0, 0x80, 0x80, // F
         ];
         self.memory[0x0..FONT_SET.len()].copy_from_slice(&FONT_SET[..]);
+    }
+
+    pub fn get_display(&self) -> [[u8; 64]; 32] {
+        self.display.get_display()
+    }
+
+    pub fn key_press(&mut self, key: u8) {
+        self.keys[key as usize] = 1
+    }
+
+    pub fn key_release(&mut self, key: u8) {
+        self.keys[key as usize] = 0
+    }
+
+    pub fn decrement_timers(&mut self) {
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+        }
+        if self.sound_timer > 0 {
+            self.sound_timer -= 1;
+        }
     }
 
     fn clear_screen(&mut self) {
@@ -360,13 +383,13 @@ impl Cpu {
         self.pc = self.v_registers[0] as u16 + value;
     }
 
-    /* fn rand(&mut self, x: usize, value: u8) {
-        let mut rng = rng();
+    fn rand(&mut self, x: usize, value: u8) {
+        let mut rng = rand::rng();
         let random_byte: u8 = rng.random();
         self.v_registers[x] = random_byte & value;
 
         self.pc += 2;
-    } */
+    }
 
     fn draw_sprite(&mut self, x: usize, y: usize, bytes: u8) {
         let vx = self.v_registers[x];
