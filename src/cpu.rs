@@ -12,8 +12,12 @@ pub struct Cpu {
     pc: u16,
     sp: usize,
     display: Display,
+    clipping_quirk: bool,
+    display_wait_quirk: bool,
+    draw_occurred_this_frame: bool,
     keys: [u8; 16],
     waiting_for_key: Option<usize>,
+    key_pressed_while_waiting: Option<u8>,
     delay_timer: u8,
     sound_timer: u8,
 }
@@ -27,29 +31,36 @@ pub fn build_cpu() -> Cpu {
         pc: 0x200,
         sp: 0,
         display: build_display(),
+        clipping_quirk: true,
+        display_wait_quirk: true,
+        draw_occurred_this_frame: false,
         keys: [0; 16],
         waiting_for_key: None,
+        key_pressed_while_waiting: None,
         delay_timer: 0,
         sound_timer: 0,
     };
+    println!("Display wait quirk: {}", cpu.display_wait_quirk);
     cpu.load_font_data();
     cpu
 }
 
 impl Cpu {
     pub fn cycle(&mut self) {
+        if self.display_wait_quirk && self.draw_occurred_this_frame {
+            return;
+        }
         if self.waiting_for_key.is_some() {
             let opcode = self.fetch_instruction();
             self.execute_instruction(opcode);
             return;
         }
 
-        println!("PC: {:#05x}", self.pc);
+        //println!("PC: {:#05x}", self.pc);
         let opcode = self.fetch_instruction();
-        println!("Opcode: {:#06x}", opcode);
+        //println!("Opcode: {:#06x}", opcode);
         self.execute_instruction(opcode);
-        println!("Delay: {}", self.delay_timer);
-        self.decrement_timers();
+        //println!("Delay: {}", self.delay_timer);
     }
 
     pub fn fetch_instruction(&self) -> u16 {
@@ -196,6 +207,10 @@ impl Cpu {
         self.display.get_display()
     }
 
+    pub fn end_frame(&mut self) {
+        self.draw_occurred_this_frame = false;
+    }
+
     pub fn key_press(&mut self, key: u8) {
         self.keys[key as usize] = 1
     }
@@ -293,6 +308,7 @@ impl Cpu {
             let new = self.v_registers[x] | self.v_registers[y];
             self.v_registers[x] = new;
         }
+        self.v_registers[0xF] = 0;
         self.pc += 2
     }
 
@@ -301,6 +317,7 @@ impl Cpu {
             let new = self.v_registers[x] & self.v_registers[y];
             self.v_registers[x] = new;
         }
+        self.v_registers[0xF] = 0;
         self.pc += 2
     }
 
@@ -309,6 +326,7 @@ impl Cpu {
             let new = self.v_registers[x] ^ self.v_registers[y];
             self.v_registers[x] = new;
         }
+        self.v_registers[0xF] = 0;
         self.pc += 2
     }
 
@@ -395,26 +413,45 @@ impl Cpu {
     }
 
     fn draw_sprite(&mut self, x: usize, y: usize, bytes: u8) {
-        let vx = self.v_registers[x];
-        let vy = self.v_registers[y];
+        let vx = self.v_registers[x] as usize % 64;
+        let vy = self.v_registers[y] as usize % 32;
+
         let mut collision = false;
+
         for i in 0..bytes {
-            let sprite = self.read_byte((self.i_register + i as u16) as usize);
-            for j in 0..8 {
-                let bit = (sprite >> (7 - j)) & 1;
-                if bit == 1 {
-                    let c = self.display.set_pixel((j + vx) as usize, (i + vy) as usize);
-                    if c {
-                        collision = true
-                    }
+            let sprite = self.memory[(self.i_register + i as u16) as usize];
+            let y = vy + i as usize;
+            if y >= 32 {
+                break;
+            }
+            for bit in 0..8 {
+                let x = vx + bit;
+                if x >= 64 {
+                    break;
+                }
+                if (sprite & (0x80 >> bit)) == 0 {
+                    continue;
+                }
+
+                let px = vx + bit;
+                let py = vy + i as usize;
+                if self.clipping_quirk && py >= 32 {
+                    continue;
+                }
+
+                if self.display.set_pixel(px, py) {
+                    collision = true;
                 }
             }
         }
+
         if collision {
             self.v_registers[0xF] = 1
         } else {
             self.v_registers[0xF] = 0
         }
+
+        self.draw_occurred_this_frame = true;
         self.pc += 2
     }
 
@@ -446,14 +483,21 @@ impl Cpu {
     }
 
     fn wait_for_key(&mut self, x: usize) {
-        let pressed_key = self.keys.iter().position(|&k| k == 1);
-
-        if let Some(key) = pressed_key {
-            self.v_registers[x] = key as u8;
-            self.pc += 2;
-            self.waiting_for_key = None;
-        } else {
-            self.waiting_for_key = Some(x);
+        match self.key_pressed_while_waiting {
+            None => {
+                let pressed_key = self.keys.iter().position(|&k| k == 1);
+                if let Some(key) = pressed_key {
+                    self.key_pressed_while_waiting = Some(key as u8);
+                }
+            }
+            Some(key) => {
+                if self.keys[key as usize] == 0 {
+                    self.v_registers[x] = key;
+                    self.pc += 2;
+                    self.waiting_for_key = None;
+                    self.key_pressed_while_waiting = None;
+                }
+            }
         }
     }
 
@@ -486,7 +530,6 @@ impl Cpu {
         if register <= 0xF {
             let value = self.v_registers[register];
             self.i_register = (value * 5) as u16;
-            println!("{:x}", self.i_register)
         }
         self.pc += 2
     }

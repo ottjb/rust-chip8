@@ -11,13 +11,14 @@ use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::{Window, WindowId};
 
-const PATH: &str = "./roms/flags.ch8";
+const PATH: &str = "./roms/beep.ch8";
+const SHOW_FPS: bool = true;
 
 const DISPLAY_WIDTH: u32 = 64;
 const DISPLAY_HEIGHT: u32 = 32;
 const SCALE: u32 = 10;
 
-const TARGET_FPS: f64 = 700.0;
+const TARGET_FPS: f64 = 60.0;
 const FRAME_TIME: Duration = Duration::from_nanos((1_000_000_000.0 / TARGET_FPS) as u64);
 
 struct App<'a> {
@@ -26,6 +27,9 @@ struct App<'a> {
     cpu: cpu::Cpu,
     last_timer_update: Instant,
     last_frame_time: Instant,
+    frame_count: u32,
+    last_fps_update: Instant,
+    current_fps: f64,
 }
 
 impl<'a> App<'a> {
@@ -131,7 +135,7 @@ impl<'a> ApplicationHandler for App<'a> {
         }
         self.last_frame_time = Instant::now();
 
-        for _ in 0..10 {
+        for _ in 0..12 {
             self.cpu.cycle();
         }
 
@@ -139,6 +143,16 @@ impl<'a> ApplicationHandler for App<'a> {
         if now.duration_since(self.last_timer_update) >= Duration::from_micros(16667) {
             self.cpu.decrement_timers();
             self.last_timer_update = now;
+        }
+
+        self.cpu.end_frame();
+
+        self.frame_count += 1;
+        if SHOW_FPS && now.duration_since(self.last_fps_update) >= Duration::from_secs(1) {
+            self.current_fps = self.frame_count as f64;
+            self.frame_count = 0;
+            self.last_fps_update = now;
+            println!("FPS: {}", self.current_fps);
         }
 
         if let Some(window) = &self.window {
@@ -160,6 +174,9 @@ fn main() {
         cpu,
         last_timer_update: Instant::now(),
         last_frame_time: Instant::now(),
+        frame_count: 0,
+        last_fps_update: Instant::now(),
+        current_fps: 0.0,
     };
 
     event_loop.run_app(&mut app).unwrap();
@@ -175,9 +192,9 @@ fn render_display(cpu: &cpu::Cpu, frame: &mut [u8]) {
         let is_on = display[y][x] != 0;
 
         let color = if is_on {
-            [255, 255, 255, 255]
+            [239, 100, 97, 255]
         } else {
-            [0, 0, 0, 255]
+            [7, 79, 87, 255]
         };
 
         pixel.copy_from_slice(&color);
