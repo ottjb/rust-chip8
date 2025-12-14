@@ -13,6 +13,9 @@ impl Display {
         self.display
     }
     pub fn set_pixel(&mut self, x: usize, y: usize) -> bool {
+        let x = x % 64;
+        let y = y % 32;
+
         self.display[y][x] ^= 0x1;
         self.display[y][x] == 0
     }

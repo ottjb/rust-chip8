@@ -13,6 +13,7 @@ pub struct Cpu {
     sp: usize,
     display: Display,
     keys: [u8; 16],
+    waiting_for_key: Option<usize>,
     delay_timer: u8,
     sound_timer: u8,
 }
@@ -27,6 +28,7 @@ pub fn build_cpu() -> Cpu {
         sp: 0,
         display: build_display(),
         keys: [0; 16],
+        waiting_for_key: None,
         delay_timer: 0,
         sound_timer: 0,
     };
@@ -36,17 +38,18 @@ pub fn build_cpu() -> Cpu {
 
 impl Cpu {
     pub fn cycle(&mut self) {
+        if self.waiting_for_key.is_some() {
+            let opcode = self.fetch_instruction();
+            self.execute_instruction(opcode);
+            return;
+        }
+
         println!("PC: {:#05x}", self.pc);
         let opcode = self.fetch_instruction();
         println!("Opcode: {:#06x}", opcode);
         self.execute_instruction(opcode);
         println!("Delay: {}", self.delay_timer);
-        if self.delay_timer > 0 {
-            self.delay_timer -= 1;
-        }
-        if self.sound_timer > 0 {
-            self.sound_timer -= 1;
-        }
+        self.decrement_timers();
     }
 
     pub fn fetch_instruction(&self) -> u16 {
@@ -100,7 +103,7 @@ impl Cpu {
             },
             0xF => match nn {
                 0x07 => self.store_delay(x as usize),
-                0x0A => println!("Opcode not implemented"),
+                0x0A => self.wait_for_key(x as usize),
                 0x15 => self.set_delay(x as usize),
                 0x18 => self.set_sound(x as usize),
                 0x1E => self.add_i_vx(x as usize),
@@ -338,8 +341,8 @@ impl Cpu {
     fn ld_vx_rshift_vy(&mut self, x: usize, y: usize) {
         if x <= 0xF && y <= 0xF {
             let vy = self.v_registers[y];
-            self.v_registers[0xF] = vy & 0xF;
             self.v_registers[x] = vy >> 1;
+            self.v_registers[0xF] = vy & 1;
         }
         self.pc += 2
     }
@@ -360,8 +363,8 @@ impl Cpu {
     fn ld_vx_lshift_vy(&mut self, x: usize, y: usize) {
         if x <= 0xF && y <= 0xF {
             let vy = self.v_registers[y];
-            self.v_registers[0xF] = vy >> 7;
             self.v_registers[x] = vy << 1;
+            self.v_registers[0xF] = vy >> 7;
         }
         self.pc += 2
     }
@@ -440,6 +443,18 @@ impl Cpu {
     fn store_delay(&mut self, register: usize) {
         self.v_registers[register] = self.delay_timer;
         self.pc += 2;
+    }
+
+    fn wait_for_key(&mut self, x: usize) {
+        let pressed_key = self.keys.iter().position(|&k| k == 1);
+
+        if let Some(key) = pressed_key {
+            self.v_registers[x] = key as u8;
+            self.pc += 2;
+            self.waiting_for_key = None;
+        } else {
+            self.waiting_for_key = Some(x);
+        }
     }
 
     fn set_delay(&mut self, register: usize) {

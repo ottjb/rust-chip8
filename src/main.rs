@@ -11,7 +11,7 @@ use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::{Window, WindowId};
 
-const PATH: &str = "../roms/keypad.ch8";
+const PATH: &str = "./roms/flags.ch8";
 
 const DISPLAY_WIDTH: u32 = 64;
 const DISPLAY_HEIGHT: u32 = 32;
@@ -26,8 +26,6 @@ struct App<'a> {
     cpu: cpu::Cpu,
     last_timer_update: Instant,
     last_frame_time: Instant,
-    frame_count: u32,
-    last_fps_print: Instant,
 }
 
 impl<'a> App<'a> {
@@ -162,8 +160,6 @@ fn main() {
         cpu,
         last_timer_update: Instant::now(),
         last_frame_time: Instant::now(),
-        frame_count: 0,
-        last_fps_print: Instant::now(),
     };
 
     event_loop.run_app(&mut app).unwrap();
