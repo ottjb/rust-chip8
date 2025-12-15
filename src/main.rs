@@ -11,7 +11,7 @@ use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::{Window, WindowId};
 
-const PATH: &str = "./roms/beep.ch8";
+const PATH: &str = "./roms/life.ch8";
 const SHOW_FPS: bool = true;
 
 const DISPLAY_WIDTH: u32 = 64;
@@ -87,7 +87,7 @@ impl<'a> App<'a> {
 impl<'a> ApplicationHandler for App<'a> {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let window_attributes = Window::default_attributes()
-            .with_title("CHIP-8 Emulator")
+            .with_title("CHIP-8")
             .with_inner_size(winit::dpi::LogicalSize::new(
                 DISPLAY_WIDTH * SCALE,
                 DISPLAY_HEIGHT * SCALE,
@@ -192,9 +192,9 @@ fn render_display(cpu: &cpu::Cpu, frame: &mut [u8]) {
         let is_on = display[y][x] != 0;
 
         let color = if is_on {
-            [239, 100, 97, 255]
+            [0, 255, 159, 255]
         } else {
-            [7, 79, 87, 255]
+            [10, 14, 39, 255]
         };
 
         pixel.copy_from_slice(&color);
