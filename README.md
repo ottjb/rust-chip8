@@ -2,7 +2,7 @@
 
 A fully-featured CHIP-8 emulator written in Rust, achieving accurate emulation with proper quirk handling and consistent 60 FPS performance.
 
-![CHIP-8 Emulator Demo]()
+![CHIP-8 Emulator Demo](/media/chip8.png)
 
 ## Overview
 
@@ -26,38 +26,30 @@ This project is a complete CHIP-8 interpreter implementation built from scratch 
 
 This emulator passes the comprehensive [Timendus CHIP-8 test suite](https://github.com/Timendus/chip8-test-suite), demonstrating accuracy and compatibility:
 
-### CHIP-8 Splash Screen
-*Tests basic display and sprite rendering*
-
-![CHIP-8 Test]()
-
 ### Corax+ Opcode Test
 *Validates all opcode implementations*
 
-![Corax Test]()
+![Corax Test](/media/corax.png)
 
 ### Flags Test
 *Verifies correct flag register behavior*
 
-![Flags Test]()
+![Flags Test](/media/flags.png)
 
 ### Quirks Test
 *Confirms proper handling of various CHIP-8 quirks*
 
-![Quirks Test]()
+![Quirks Test](/media/quirks.png)
 
 ## Games & Programs
 
 The emulator runs a wide variety of CHIP-8 programs flawlessly:
 
 ### IBM Logo
-![IBM Logo]()
+![IBM Logo](/media/ibm.png)
 
 ### Tetris
-![Tetris]()
-
-### Space Invaders
-![Space Invaders]()
+![Tetris](/media/tetris.gif)
 
 ## Technical Implementation
 
@@ -128,8 +120,7 @@ chip8-emulator/
 ├── src/
 │   ├── main.rs      # Window management, event loop, rendering
 │   ├── cpu.rs       # CPU core, instruction execution
-│   ├── display.rs   # Display buffer management
-│   └── utility.rs   # Helper utilities
+│   └── display.rs   # Display buffer management
 ├── roms/            # CHIP-8 ROM files
 └── Cargo.toml       # Project dependencies
 ```
@@ -143,13 +134,6 @@ This project provided hands-on experience with:
 - **Systems emulation**: Timing accuracy, hardware quirks, and compatibility testing
 - **Graphics programming**: Frame buffers, pixel manipulation, and rendering pipelines
 
-## Resources
-
-- [Cowgod's CHIP-8 Technical Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM)
-- [CHIP-8 Wikipedia](https://en.wikipedia.org/wiki/CHIP-8)
-- [Timendus Test Suite](https://github.com/Timendus/chip8-test-suite)
-- [Guide to making a CHIP-8 emulator](https://tobiasvl.github.io/blog/write-a-chip-8-emulator/)
-- 
 ---
 
-*Built with Rust 🦀*
+*Built with Rust* 🦀
